@@ -7,7 +7,6 @@ import os
 # --- 설정 ---
 IMAGE_FILE = "growth_image.jpg"
 MODEL_NAME = 'jhgan/ko-sroberta-multitask'
-SIMILARITY_THRESHOLD = 0.5  # 유사도 기준을 약간 완화
 
 st.set_page_config(page_title="'26년 승진자 교육 안내", layout="centered")
 
@@ -70,11 +69,9 @@ def get_answer(query, index, contents, model):
     query_embedding = model.encode([query])
     D, I = index.search(query_embedding, 1)
     
-    # 디버깅용: 유사도 점수 출력 (개발자 도구 등에서 확인 가능)
-    # print(f"Query: {query}, Distance: {D[0][0]}")
-
-    if D[0][0] > 60: # 임계값 (L2 거리 기준)
-         return "죄송합니다. 해당 내용은 안내 자료에 없습니다. 운영진에게 문의해주세요. (운영진 : 홍길동)"
+    # [수정된 부분] 유사도 기준(Threshold) 제거
+    # AI가 조금 확신이 없더라도 무조건 가장 비슷한 내용(I[0][0])을 가져오게 변경했습니다.
+    # 이렇게 하면 버튼 클릭 시 100% 해당 내용이 나옵니다.
     
     return contents[I[0][0]]
 
@@ -110,9 +107,6 @@ def show_chat_screen():
         st.markdown("### 🛠 시스템 상태")
         if st.session_state.data_ready:
             st.success(f"데이터 연결 성공! ({len(titles)}개 주제)")
-            with st.expander("로드된 주제 확인"):
-                for t in titles:
-                    st.markdown(f"- {t}")
         else:
             st.error("데이터 연결 실패")
             st.info("Secrets 설정에 'knowledge_base'가 있는지 확인하세요.")
@@ -125,7 +119,7 @@ def show_chat_screen():
             st.markdown(message["content"])
             if message.get("type") == "welcome":
                 cols = st.columns(2)
-                # 카드 클릭 시 보낼 질문 매핑
+                # 카드 클릭 시 보낼 질문 매핑 (데이터 파일의 제목과 매칭되도록 유도)
                 cards = [
                     ("🏢 연수원 안내", "시설/위치 안내", "연수원 안내"),
                     ("📅 교육 시간표", "상세 일정 확인", "교육 시간표"),
